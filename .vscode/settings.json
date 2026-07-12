@@ -1,0 +1,13 @@
+{
+	"luau-lsp.platform.type": "roblox",
+	"luau-lsp.types.robloxSecurityLevel": "PluginSecurity",
+	"luau-lsp.sourcemap.enabled": true,
+	"luau-lsp.require.mode": "relativeToFile",
+	"editor.formatOnSave": true,
+	"[luau]": {
+		"editor.defaultFormatter": "JohnnyMorganz.stylua"
+	},
+	"[lua]": {
+		"editor.defaultFormatter": "JohnnyMorganz.stylua"
+	}
+}

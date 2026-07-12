@@ -1,0 +1,10 @@
+# Toolchain pinned by Rokit (https://github.com/rojo-rbx/rokit).
+# Install Rokit once, then run `rokit install` in this directory.
+# Never install ad-hoc tool versions — bump pins here instead (see AGENTS.md).
+
+[tools]
+rojo = "rojo-rbx/rojo@7.7.0"
+stylua = "JohnnyMorganz/StyLua@2.5.2"
+selene = "Kampfkarren/selene@0.31.0"
+luau-lsp = "JohnnyMorganz/luau-lsp@1.68.1"
+lune = "lune-org/lune@0.10.5"

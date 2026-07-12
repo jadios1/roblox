@@ -1,0 +1,16 @@
+# Build artifacts — regenerate with `rojo build` / `rojo sourcemap`
+build.rbxl
+sourcemap.json
+
+# Local caches (downloaded type definitions, etc.)
+.cache/
+
+# Future package manager output (see AGENTS.md dependency policy)
+Packages/
+DevPackages/
+luau_packages/
+lune_packages/
+
+# Roblox Studio lock files
+*.rbxl.lock
+*.rbxlx.lock
