@@ -84,6 +84,16 @@ was runnable locally first.
 - Composition roots and adapters may use classic instance access
   (`game:GetService(...)`) — they are Roblox-only glue.
 
+## Luau strict-mode notes
+
+- All code is `--!strict` (set project-wide in `.luaurc`).
+- Don't compare metatable-based types (e.g. `Wallet`) against `nil` with
+  `==`/`~=` — strict Luau rejects it ("do not have the same metatable").
+  Use truthiness: `if not wallet then`.
+- Local runs of `lune run check` may skip the types gate if luau-lsp isn't
+  installed; CI always runs it. Don't treat "passed locally" as green if the
+  types gate was the one that failed to run.
+
 ## Testing policy
 
 - Every module in `src/shared/**` gets a spec in `tests/**` mirroring its

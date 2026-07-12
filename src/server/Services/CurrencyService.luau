@@ -46,7 +46,9 @@ function CurrencyService.new(deps: Deps): CurrencyService
 end
 
 function CurrencyService.loadPlayer(self: CurrencyService, userId: number): ()
-	if self._wallets[userId] ~= nil then
+	-- Truthiness instead of `~= nil`: strict Luau rejects nil comparisons
+	-- against metatable-based types like Wallet.
+	if self._wallets[userId] then
 		return
 	end
 	local data = self._store.load(storeKey(userId))
@@ -64,7 +66,7 @@ end
 
 function CurrencyService.unloadPlayer(self: CurrencyService, userId: number): ()
 	local wallet = self._wallets[userId]
-	if wallet == nil then
+	if not wallet then
 		return
 	end
 	self._store.save(storeKey(userId), wallet:serialize())
@@ -73,7 +75,7 @@ end
 
 function CurrencyService.getBalance(self: CurrencyService, userId: number): number?
 	local wallet = self._wallets[userId]
-	if wallet == nil then
+	if not wallet then
 		return nil
 	end
 	return wallet:balance()
@@ -85,7 +87,7 @@ function CurrencyService.deposit(
 	amount: number
 ): (boolean, string?)
 	local wallet = self._wallets[userId]
-	if wallet == nil then
+	if not wallet then
 		return false, "player is not loaded"
 	end
 	return wallet:deposit(amount)
@@ -97,7 +99,7 @@ function CurrencyService.withdraw(
 	amount: number
 ): (boolean, string?)
 	local wallet = self._wallets[userId]
-	if wallet == nil then
+	if not wallet then
 		return false, "player is not loaded"
 	end
 	return wallet:withdraw(amount)
