@@ -1,5 +1,10 @@
 name: CI
 
+# CI does setup, then runs exactly the same gate command a developer runs:
+# `lune run check`. It deliberately does NOT list the individual gates — adding
+# one to lune/util/gates.luau must never require editing this file. The
+# "config parity" gate fails the build if a gate step reappears here.
+
 on:
   push:
     branches: ["**"]
@@ -8,6 +13,9 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   ci:
@@ -20,20 +28,8 @@ jobs:
         with:
           cache: true
 
-      - name: Format check (StyLua)
-        run: stylua --check src tests lune
-
-      - name: Lint (selene)
-        run: selene src tests lune
-
       - name: Install Lune type definitions
         run: lune setup
 
-      - name: Type check (luau-lsp)
-        run: lune run analyze
-
-      - name: Unit tests (Lune + tiniest)
-        run: lune run test
-
-      - name: Build place (Rojo smoke test)
-        run: rojo build default.project.json --output build.rbxl
+      - name: Quality gates
+        run: lune run check

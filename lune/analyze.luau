@@ -3,15 +3,17 @@
 --   1. src/       — Roblox platform, with Roblox global types + Rojo sourcemap
 --   2. tests/lune — standard platform (Lune), with @lune/* typedef aliases
 -- Run from the repo root:   lune run analyze
+--
+-- This script does no network I/O. globalTypes.d.luau is committed and pinned
+-- to the luau-lsp version in rokit.toml, for the same reason roblox.yml is
+-- committed: a gate that downloads its own inputs from a moving branch is not
+-- a gate — it can fail or pass for reasons that are not in the repo.
+-- Refresh it with `lune run update-types` after bumping luau-lsp.
 
 local fs = require("@lune/fs")
-local net = require("@lune/net")
 local process = require("@lune/process")
 
-local GLOBAL_TYPES_URL =
-	"https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/main/scripts/globalTypes.d.luau"
-local CACHE_DIR = ".cache"
-local GLOBAL_TYPES_PATH = `{CACHE_DIR}/globalTypes.d.luau`
+local pins = require("./util/pins")
 
 local function run(program: string, args: { string }): ()
 	print(`\n$ {program} {table.concat(args, " ")}`)
@@ -22,19 +24,9 @@ local function run(program: string, args: { string }): ()
 	end
 end
 
-if not fs.isDir(CACHE_DIR) then
-	fs.writeDir(CACHE_DIR)
-end
-
--- Fetch Roblox global type definitions (cached; delete .cache/ to refresh).
-if not fs.isFile(GLOBAL_TYPES_PATH) then
-	print(`fetching {GLOBAL_TYPES_URL}`)
-	local response = net.request(GLOBAL_TYPES_URL)
-	if not response.ok then
-		print(`error: failed to download Roblox global types (HTTP {response.statusCode})`)
-		process.exit(1)
-	end
-	fs.writeFile(GLOBAL_TYPES_PATH, response.body)
+if not fs.isFile(pins.GLOBAL_TYPES_PATH) then
+	print(`error: {pins.GLOBAL_TYPES_PATH} is missing — run "lune run update-types"`)
+	process.exit(1)
 end
 
 -- The sourcemap lets luau-lsp resolve instance paths the way the engine will.
@@ -45,7 +37,7 @@ run("luau-lsp", {
 	"analyze",
 	"--platform",
 	"roblox",
-	`--definitions:@roblox={GLOBAL_TYPES_PATH}`,
+	`--definitions:@roblox={pins.GLOBAL_TYPES_PATH}`,
 	"--sourcemap",
 	"sourcemap.json",
 	"--base-luaurc",
@@ -55,11 +47,15 @@ run("luau-lsp", {
 
 -- Pass 2: Lune-world code (tests + task scripts). @lune/* requires resolve via
 -- the "lune" alias in .luaurc, which points at the typedefs installed by
--- `lune setup` (~/.lune/.typedefs/<version>/).
+-- `lune setup`. The alias is version-pinned, so check that exact directory —
+-- checking only the parent would let a Lune bump produce an unresolved-alias
+-- error instead of this message. The parity gate keeps the pin honest.
 local home = process.env.HOME
-local typedefsDir = if home then `{home}/.lune/.typedefs` else nil
+local luneVersion = pins.toolVersion("lune")
+local typedefsDir = if home then `{home}/.lune/.typedefs/{luneVersion}` else nil
 if typedefsDir == nil or not fs.isDir(typedefsDir) then
-	print('error: Lune typedefs not found — run "lune setup" once first')
+	print(`error: Lune {luneVersion} typedefs not found at {typedefsDir or "$HOME (unset)"}`)
+	print('       run "lune setup" once with the pinned Lune version')
 	process.exit(1)
 end
 

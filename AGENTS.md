@@ -5,6 +5,10 @@ for ALL coding agents (Claude Code reads it via CLAUDE.md; Codex reads it
 directly). Keep it up to date: when you change tooling, structure, or policy,
 update this file in the same commit.
 
+Split of responsibilities: **this file** owns structure, tooling and process.
+**[STYLE.md](STYLE.md)** owns the error contract (throw vs return), naming and
+commenting. Read both before writing code.
+
 ## Project map
 
 ```
@@ -15,9 +19,14 @@ src/server/    Services/  — pure orchestration, all effects behind injected de
                init.server.luau — composition root; the only place adapters get wired in
 src/client/    Thin rendering/input glue. No game logic.
 tests/         Lune unit tests (*.spec.luau) + fakes in tests/helpers/
-lune/          Task scripts (`lune run <name>`) + vendored libs in lune/lib/
+lune/          Task scripts (`lune run <name>`); shared helpers in lune/util/
+               and vendored libs in lune/lib/
 docs/          Design notes, including the cloud integration test stub
 ```
+
+Committed at the repo root: `roblox.yml` (pinned selene std) and
+`globalTypes.d.luau` + `globalTypes.version` (pinned Roblox type definitions).
+Both are generated files kept in git on purpose — see Guardrails.
 
 Layer rules (enforced by review, not tooling — do not break them):
 
@@ -37,16 +46,36 @@ and get every gate green.** No exceptions, including "trivial" changes.
 
 | Gate | Command | What it catches |
 |---|---|---|
+| config parity | `lune run parity` | duplicated facts drifting apart (see below) |
 | format | `stylua --check src tests lune` | style drift |
 | lint | `selene src tests lune` | undefined globals, suspicious code |
 | types | `lune run analyze` | strict Luau type errors vs real Roblox/Lune APIs |
 | unit tests | `lune run test` | behavior regressions |
 | build | `rojo build default.project.json --output build.rbxl` | invalid project/instance tree |
 
+**The gate list lives in one place: `lune/util/gates.luau`.** Add a gate there
+and it runs locally and in CI automatically. CI does setup and then runs
+`lune run check` — nothing else. Never add a gate step to `ci.yml`; the parity
+gate fails the build if you do.
+
 `stylua src tests lune` (no `--check`) auto-fixes formatting.
 `lune run test -- --update-snapshots` refreshes tiniest snapshots.
-CI (`.github/workflows/ci.yml`) runs the same gates — if it's red there, it
-was runnable locally first.
+
+### Config parity (IF-CHANGE-THEN-CHANGE)
+
+A few facts unavoidably appear in two files. `lune run parity` fails when they
+drift, so a stale copy is a build failure rather than a confusing error later:
+
+| If you change | You must also change |
+|---|---|
+| `lune` pin in `rokit.toml` | the `lune` typedefs alias in `.luaurc`, then `lune setup` |
+| `luau-lsp` pin in `rokit.toml` | run `lune run update-types`, commit both `globalTypes.*` |
+| the gate list | nothing — but do not re-add gate steps to `ci.yml` |
+| mount names in `default.project.json` | see the require rules below; the names are load-bearing |
+
+For a deliberate, temporary divergence: `ROB_ALLOW_CONFIG_DRIFT=1 lune run check`
+downgrades parity failures to warnings. Say why in the commit message — it is
+not meant to survive review.
 
 ## Guardrails
 
@@ -55,15 +84,22 @@ was runnable locally first.
   upgrading, or writing code against any tool or library: check the actual
   GitHub releases page / registry entry / `--help` output / bundled type
   definitions, and pin exact versions. This applies to Roblox engine APIs too
-  — verify against the type definitions that `lune run analyze` downloads
-  (`.cache/globalTypes.d.luau`) rather than assuming a method exists.
+  — verify against the committed `globalTypes.d.luau` rather than assuming a
+  method exists.
+- **Gates must not download their own inputs.** `roblox.yml` and
+  `globalTypes.d.luau` are committed so that a check can only fail for reasons
+  that are in the repo. `lune run update-types` is the one script allowed to
+  touch the network, and it is not a gate — run it by hand after bumping
+  `luau-lsp` and commit the result.
 - **All tools are pinned in `rokit.toml`.** Install with `rokit install`;
   never install ad-hoc tool versions or invoke tools not listed there. To
   upgrade a tool: verify the new version's release notes, bump `rokit.toml`,
   run all gates, and note anything that changed behavior.
 - **Do not commit generated artifacts**: `build.rbxl`, `sourcemap.json`,
-  `.cache/` are gitignored — keep it that way. `roblox.yml` IS committed on
-  purpose (pinned selene std; refresh with `selene update-roblox-std`).
+  `.cache/` are gitignored — keep it that way. `roblox.yml` (pinned selene std;
+  refresh with `selene update-roblox-std`) and `globalTypes.d.luau` /
+  `globalTypes.version` (pinned Roblox types; refresh with
+  `lune run update-types`) ARE committed on purpose.
 - **Never edit `lune/lib/**` (vendored third-party code).** See
   `lune/lib/tiniest/VENDOR.md` for how to update it.
 - **Secrets never enter this repo.** Roblox Open Cloud API keys live in
@@ -78,6 +114,17 @@ was runnable locally first.
   `src/shared` as a sibling of `src/server` inside ServerScriptService.
   Do NOT use `.luaurc` aliases in `src/**` — engine support for aliases is not
   established.
+- **The mount names in `default.project.json` are load-bearing.** A server file
+  resolving `require("../../shared/Currency")` walks up out of
+  `ServerScriptService.Server` and looks for a sibling named exactly `shared` —
+  lowercase, matching the on-disk directory. Renaming that instance (or
+  `Server`) breaks every server require at runtime, which no other gate
+  catches, so the parity gate asserts both mounts. `src/shared` is mounted
+  twice on purpose (ReplicatedStorage for the client, ServerScriptService for
+  the server). Consequence: they are two distinct instance trees with separate
+  require caches. Fine while shared modules are stateless — but a shared module
+  holding module-level state would have one copy per side, so keep state in
+  services, not in shared modules.
 - Inside `tests/**` and `lune/**` (Lune-only code): aliases from `.luaurc` are
   fine and preferred: `@shared/...`, `@server/...`, `@tiniest/...`, plus the
   Lune builtins `@lune/fs`, `@lune/process`, etc.
@@ -90,9 +137,9 @@ was runnable locally first.
 - Don't compare metatable-based types (e.g. `Wallet`) against `nil` with
   `==`/`~=` — strict Luau rejects it ("do not have the same metatable").
   Use truthiness: `if not wallet then`.
-- Local runs of `lune run check` may skip the types gate if luau-lsp isn't
-  installed; CI always runs it. Don't treat "passed locally" as green if the
-  types gate was the one that failed to run.
+- No gate is ever skipped: a missing tool makes its gate FAIL, it does not pass
+  quietly. If `rokit install` has not been run, expect failures rather than a
+  green summary — read the summary block, do not assume it.
 
 ## Testing policy
 
@@ -108,7 +155,15 @@ was runnable locally first.
   covered by cloud integration tests later
   (see `docs/cloud-integration-tests.md` — not wired up yet).
 - Tests must be deterministic: no timing dependence, no ordering dependence.
-  Inject clocks/randomness as deps if a feature needs them.
+  Inject clocks/randomness as deps if a feature needs them. `CurrencyService`
+  takes `wait` and `log` for exactly this reason — retries and recovery
+  reporting are asserted without real time passing or real output.
+- **A test you have not seen fail proves nothing.** After writing a test for a
+  behavior, break that behavior on purpose and confirm the test goes red, then
+  restore it. This catches tests whose setup makes the bug unreachable, which
+  is a real failure mode here: an earlier version of the "refuses to overwrite
+  unreadable data" spec passed even with the guard removed, because the fake
+  was failing every write anyway.
 
 ## Dependency policy
 
@@ -145,3 +200,15 @@ Player lifecycle — is validated via Roblox Open Cloud, not locally. The
 planned harness is documented in `docs/cloud-integration-tests.md`. Until it
 exists, keep Roblox-touching code inside adapters/roots so the untestable
 surface stays minimal.
+
+Known gaps in the persistence slice, deliberately not solved yet — do not
+copy the omission into a new feature without noting it:
+
+- **No session locking.** Two servers holding the same player can still clobber
+  each other. `SetAsync` is used where a real game needs `UpdateAsync` plus a
+  lock, or a maintained persistence library (see the dependency policy).
+- **No balance ceiling.** `Wallet` accepts any positive integer, so past 2^53
+  a deposit silently stops changing the balance instead of failing loudly.
+- The shutdown flush (`BindToClose` → `unloadAll`) is unit-tested but its
+  interaction with Roblox's shutdown deadline is not — that needs the cloud
+  harness.

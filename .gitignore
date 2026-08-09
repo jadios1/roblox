@@ -2,7 +2,8 @@
 build.rbxl
 sourcemap.json
 
-# Local caches (downloaded type definitions, etc.)
+# Scratch/local caches. Note globalTypes.d.luau is NOT here: it is committed
+# and pinned to the luau-lsp version in rokit.toml (see lune/update-types.luau).
 .cache/
 
 # Future package manager output (see AGENTS.md dependency policy)

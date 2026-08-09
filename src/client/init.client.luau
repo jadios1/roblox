@@ -1,7 +1,7 @@
 --!strict
 -- Thin client glue: no game logic here. Anything worth testing belongs in
 -- src/shared (pure + Lune-testable); the client only renders results. Shared
--- modules are available to the client at ReplicatedStorage.Shared.
+-- modules are available to the client at ReplicatedStorage.shared.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

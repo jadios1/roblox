@@ -6,7 +6,9 @@ formatting, headless unit tests, and a headless place build — all runnable on
 Linux/CI with zero Roblox credentials.
 
 Working with an AI coding agent? The rules live in [AGENTS.md](AGENTS.md)
-(Codex et al.) and [CLAUDE.md](CLAUDE.md) (Claude Code — imports the same file).
+(structure, tooling, process) and [STYLE.md](STYLE.md) (error contract,
+naming). [CLAUDE.md](CLAUDE.md) imports both for Claude Code; Codex reads them
+directly.
 
 ## Quickstart
 
@@ -23,12 +25,17 @@ lune run check    # run every quality gate
 
 | Command | What it does |
 |---|---|
-| `lune run check` | all quality gates (format, lint, types, tests, build) |
+| `lune run check` | all quality gates (parity, format, lint, types, tests, build) |
 | `lune run test` | unit tests only (append `-- --update-snapshots` to refresh snapshots) |
 | `lune run analyze` | strict type analysis via luau-lsp (Roblox + Lune passes) |
+| `lune run parity` | checks that duplicated config facts have not drifted |
+| `lune run update-types` | refresh the pinned Roblox type definitions after bumping luau-lsp |
 | `stylua src tests lune` | auto-format |
 | `rojo build default.project.json -o build.rbxl` | build the place file |
 | `rojo serve` | live-sync into Roblox Studio while editing |
+
+CI runs `lune run check` and nothing else, so anything CI catches is
+reproducible locally with one command.
 
 ## Layout
 
