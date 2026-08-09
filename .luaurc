@@ -1,0 +1,9 @@
+{
+  "languageMode": "strict",
+  "aliases": {
+    "shared": "./src/shared",
+    "server": "./src/server",
+    "tiniest": "./lune/lib/tiniest",
+    "lune": "~/.lune/.typedefs/0.10.5/"
+  }
+}

@@ -1,0 +1,28 @@
+{
+	"name": "rob",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"shared": {
+				"$path": "src/shared"
+			}
+		},
+		"ServerScriptService": {
+			"Server": {
+				"$path": "src/server"
+			},
+			"shared": {
+				"$path": "src/shared"
+			}
+		},
+		"StarterPlayer": {
+			"$className": "StarterPlayer",
+			"StarterPlayerScripts": {
+				"$className": "StarterPlayerScripts",
+				"Client": {
+					"$path": "src/client"
+				}
+			}
+		}
+	}
+}

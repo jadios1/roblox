@@ -1,0 +1,35 @@
+name: CI
+
+# CI does setup, then runs exactly the same gate command a developer runs:
+# `lune run check`. It deliberately does NOT list the individual gates — adding
+# one to lune/util/gates.luau must never require editing this file. The
+# "config parity" gate fails the build if a gate step reappears here.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned toolchain (Rokit)
+        uses: CompeyDev/setup-rokit@v0.1.2
+        with:
+          cache: true
+
+      - name: Install Lune type definitions
+        run: lune setup
+
+      - name: Quality gates
+        run: lune run check

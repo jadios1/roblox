@@ -1,0 +1,5 @@
+# Lint config. `std = "roblox"` + pinned source keeps CI hermetic: the generated
+# standard library is committed as roblox.yml. Regenerate with `selene update-roblox-std`.
+std = "roblox"
+roblox-std-source = "pinned"
+exclude = ["lune/lib/**"]

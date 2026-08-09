@@ -1,0 +1,17 @@
+# Build artifacts — regenerate with `rojo build` / `rojo sourcemap`
+build.rbxl
+sourcemap.json
+
+# Scratch/local caches. Note globalTypes.d.luau is NOT here: it is committed
+# and pinned to the luau-lsp version in rokit.toml (see lune/update-types.luau).
+.cache/
+
+# Future package manager output (see AGENTS.md dependency policy)
+Packages/
+DevPackages/
+luau_packages/
+lune_packages/
+
+# Roblox Studio lock files
+*.rbxl.lock
+*.rbxlx.lock
