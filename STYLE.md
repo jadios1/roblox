@@ -1,13 +1,9 @@
 # rob — code style
 
 Conventions that formatters and linters can't enforce. StyLua owns layout and
-selene owns lint; this file owns the decisions they can't make. Read it
-alongside [AGENTS.md](AGENTS.md), which owns structure, tooling and process.
+selene owns lint.
 
 ## Error contract
-
-Every failure in this codebase is one of exactly two kinds. Deciding which one
-you have is the first thing to do when writing a function that can fail.
 
 ### 1. Expected failures — return them, never throw
 
@@ -39,13 +35,12 @@ export type LoadResult = { ok: true, data: unknown } | { ok: false, err: string 
 ```
 
 `data` being `nil` inside an `ok` result means "no record exists" — which is
-not an error. That distinction is exactly why this type is tagged.
+not an error. 
 
 ### 2. Programmer errors — assert, as early as possible
 
 A dependency wired up wrong, an invariant broken by our own code, a constructor
-handed a value that only our code could have produced. These are bugs. They
-should stop the program loudly rather than degrade.
+handed a value that only our code could have produced should stop the program loudly rather than degrade.
 
 - Use `assert` with a message describing the requirement.
 - **Assert at construction time, not at use time.** A service given a bad
@@ -71,9 +66,6 @@ Roblox APIs that throw (DataStore, HttpService, MarketplaceService, …) are
 called only inside `src/server/Adapters/**`, and the adapter `pcall`s them and
 converts the result into a kind-1 return value. A service must never have to
 `pcall` anything: if it does, effects have leaked into it.
-
-This is what keeps services testable — a fake can return a failure result, but
-it cannot realistically reproduce a Roblox runtime error.
 
 ### 4. Failures that nobody is waiting for go to an injected log
 

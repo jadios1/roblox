@@ -1,13 +1,15 @@
 # rob — agent instructions
 
 Roblox game written in native Luau. This file is the canonical instruction set
-for ALL coding agents (Claude Code reads it via CLAUDE.md; Codex reads it
-directly). Keep it up to date: when you change tooling, structure, or policy,
-update this file in the same commit.
+for ALL coding agents. Codex reads it directly; Claude Code reads it through
+`CLAUDE.md`, which is a symlink to this file. Keep it up to date: when you
+change tooling, structure, or policy, update this file in the same commit.
 
 Split of responsibilities: **this file** owns structure, tooling and process.
 **[STYLE.md](STYLE.md)** owns the error contract (throw vs return), naming and
 commenting. Read both before writing code.
+
+@STYLE.md
 
 ## Project map
 
