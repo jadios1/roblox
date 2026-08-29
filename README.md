@@ -42,6 +42,7 @@ reproducible locally with one command.
 - `src/shared` — pure game logic (no Roblox APIs; unit-tested under [Lune](https://github.com/lune-org/lune))
 - `src/server` — services (pure, dependency-injected, tested) + adapters/composition root (thin Roblox glue)
 - `src/client` — thin client glue
+- `src/world` — source-controlled static Workspace content managed by Rojo
 - `tests` — [tiniest](https://github.com/dphfox/tiniest) specs + fakes
 - `lune` — task scripts and vendored libs
 - `docs/cloud-integration-tests.md` — planned Roblox Open Cloud test harness (not wired up yet)

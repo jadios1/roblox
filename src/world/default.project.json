@@ -1,0 +1,359 @@
+{
+  "name": "TerritoryBall",
+  "tree": {
+    "$className": "Model",
+    "Runtime": {
+      "$className": "Folder",
+      "Ball": {
+        "$className": "Part",
+        "$properties": {
+          "Anchored": false,
+          "CanCollide": true,
+          "CanQuery": true,
+          "CanTouch": true,
+          "CastShadow": true,
+          "Color": [
+            1.0,
+            0.85,
+            0.2
+          ],
+          "Locked": false,
+          "Material": "SmoothPlastic",
+          "Position": [
+            0.0,
+            2.0,
+            0.0
+          ],
+          "Shape": "Ball",
+          "Size": [
+            3.0,
+            3.0,
+            3.0
+          ]
+        }
+      },
+      "$ignoreUnknownInstances": true
+    },
+    "Static": {
+      "$className": "Model",
+      "ArenaBase": {
+        "$className": "Part",
+        "$properties": {
+          "Anchored": true,
+          "CanCollide": true,
+          "CanQuery": true,
+          "CanTouch": true,
+          "CastShadow": false,
+          "Color": [
+            0.1059,
+            0.1216,
+            0.1451
+          ],
+          "Locked": false,
+          "Material": "Slate",
+          "Position": [
+            0.0,
+            -1.0,
+            0.0
+          ],
+          "Size": [
+            124.0,
+            2.0,
+            54.0
+          ]
+        }
+      },
+      "Boundaries": {
+        "$className": "Folder",
+        "NorthWall": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": true,
+            "CanQuery": true,
+            "CanTouch": true,
+            "CastShadow": false,
+            "Color": [
+              0.7451,
+              0.7765,
+              0.8235
+            ],
+            "Locked": false,
+            "Material": "Glass",
+            "Position": [
+              0.0,
+              6.0,
+              -26.0
+            ],
+            "Size": [
+              124.0,
+              12.0,
+              2.0
+            ],
+            "Transparency": 0.25
+          }
+        },
+        "Player1EndWall": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": true,
+            "CanQuery": true,
+            "CanTouch": true,
+            "CastShadow": false,
+            "Color": [
+              0.1216,
+              0.4431,
+              0.8588
+            ],
+            "Locked": false,
+            "Material": "Glass",
+            "Position": [
+              -61.0,
+              6.0,
+              0.0
+            ],
+            "Size": [
+              2.0,
+              12.0,
+              50.0
+            ],
+            "Transparency": 0.25
+          }
+        },
+        "Player2EndWall": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": true,
+            "CanQuery": true,
+            "CanTouch": true,
+            "CastShadow": false,
+            "Color": [
+              0.898,
+              0.2667,
+              0.2392
+            ],
+            "Locked": false,
+            "Material": "Glass",
+            "Position": [
+              61.0,
+              6.0,
+              0.0
+            ],
+            "Size": [
+              2.0,
+              12.0,
+              50.0
+            ],
+            "Transparency": 0.25
+          }
+        },
+        "SouthWall": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": true,
+            "CanQuery": true,
+            "CanTouch": true,
+            "CastShadow": false,
+            "Color": [
+              0.7451,
+              0.7765,
+              0.8235
+            ],
+            "Locked": false,
+            "Material": "Glass",
+            "Position": [
+              0.0,
+              6.0,
+              26.0
+            ],
+            "Size": [
+              124.0,
+              12.0,
+              2.0
+            ],
+            "Transparency": 0.25
+          }
+        },
+        "$ignoreUnknownInstances": false
+      },
+      "Markers": {
+        "$className": "Folder",
+        "BallSpawn": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanQuery": false,
+            "CanTouch": false,
+            "CastShadow": false,
+            "Color": [
+              1.0,
+              0.85,
+              0.2
+            ],
+            "Locked": false,
+            "Material": "Neon",
+            "Position": [
+              0.0,
+              0.5,
+              0.0
+            ],
+            "Size": [
+              3.0,
+              0.2,
+              3.0
+            ],
+            "Transparency": 0.25
+          }
+        },
+        "Player1Spawn": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanQuery": false,
+            "CanTouch": false,
+            "CastShadow": false,
+            "Color": [
+              0.4,
+              0.75,
+              1.0
+            ],
+            "Locked": false,
+            "Material": "Neon",
+            "Position": [
+              -45.0,
+              0.5,
+              0.0
+            ],
+            "Size": [
+              6.0,
+              0.2,
+              6.0
+            ],
+            "Transparency": 0.25
+          }
+        },
+        "Player2Spawn": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanQuery": false,
+            "CanTouch": false,
+            "CastShadow": false,
+            "Color": [
+              1.0,
+              0.55,
+              0.4
+            ],
+            "Locked": false,
+            "Material": "Neon",
+            "Position": [
+              45.0,
+              0.5,
+              0.0
+            ],
+            "Size": [
+              6.0,
+              0.2,
+              6.0
+            ],
+            "Transparency": 0.25
+          }
+        },
+        "$ignoreUnknownInstances": false
+      },
+      "Zones": {
+        "$className": "Folder",
+        "Neutral": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": true,
+            "CanQuery": true,
+            "CanTouch": true,
+            "CastShadow": false,
+            "Color": [
+              0.2941,
+              0.3333,
+              0.3882
+            ],
+            "Locked": false,
+            "Material": "SmoothPlastic",
+            "Position": [
+              0.0,
+              0.2,
+              0.0
+            ],
+            "Size": [
+              20.0,
+              0.4,
+              50.0
+            ]
+          }
+        },
+        "Player1": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": true,
+            "CanQuery": true,
+            "CanTouch": true,
+            "CastShadow": false,
+            "Color": [
+              0.1216,
+              0.4431,
+              0.8588
+            ],
+            "Locked": false,
+            "Material": "SmoothPlastic",
+            "Position": [
+              -35.0,
+              0.2,
+              0.0
+            ],
+            "Size": [
+              50.0,
+              0.4,
+              50.0
+            ]
+          }
+        },
+        "Player2": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": true,
+            "CanQuery": true,
+            "CanTouch": true,
+            "CastShadow": false,
+            "Color": [
+              0.898,
+              0.2667,
+              0.2392
+            ],
+            "Locked": false,
+            "Material": "SmoothPlastic",
+            "Position": [
+              35.0,
+              0.2,
+              0.0
+            ],
+            "Size": [
+              50.0,
+              0.4,
+              50.0
+            ]
+          }
+        },
+        "$ignoreUnknownInstances": false
+      },
+      "$ignoreUnknownInstances": false
+    },
+    "$ignoreUnknownInstances": false
+  }
+}

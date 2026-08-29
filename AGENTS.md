@@ -20,10 +20,14 @@ src/server/    Services/  — pure orchestration, all effects behind injected de
                Adapters/  — thin wrappers around Roblox services (DataStore, …); NO logic
                init.server.luau — composition root; the only place adapters get wired in
 src/client/    Thin rendering/input glue. No game logic.
+src/world/     Rojo-managed static Workspace content. No scripts or runtime state.
 tests/         Lune unit tests (*.spec.luau) + fakes in tests/helpers/
 lune/          Task scripts (`lune run <name>`); shared helpers in lune/util/
                and vendored libs in lune/lib/
 docs/          Design notes, including the cloud integration test stub
+plans/         Ephemeral delivery plans only. Delete a plan when its slice ships;
+               delete this directory and map entry when planning is exhausted.
+               Source, tests, and durable docs must never reference its contents.
 ```
 
 Committed at the repo root: `roblox.yml` (pinned selene std) and
