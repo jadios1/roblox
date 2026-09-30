@@ -58,6 +58,16 @@ function Wallet.withdraw(self: Wallet, amount: number): (boolean, string?)
 	return true, nil
 end
 
+-- New: check if a withdrawal would succeed without mutating
+function Wallet.canWithdraw(self: Wallet, amount: number): boolean
+	-- amount must be a positive integer; treat invalid as false
+	local ok, _ = validateAmount(amount)
+	if not ok then
+		return false
+	end
+	return amount <= self._balance
+end
+
 function Wallet.serialize(self: Wallet): WalletData
 	return { balance = self._balance }
 end
