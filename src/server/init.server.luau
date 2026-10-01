@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CurrencyService = require("@self/Services/CurrencyService")
 local DataStoreAdapter = require("@self/Adapters/DataStoreAdapter")
+local WanderService = require("@self/Services/WanderService")
+local WanderAdapter = require("@self/Adapters/WanderAdapter")
 
 local currency = CurrencyService.new({
 	store = DataStoreAdapter.new("PlayerCurrency"),
@@ -26,8 +28,6 @@ end
 local function onPlayerAdded(player: Player)
 	local ok, err = currency:loadPlayer(player.UserId)
 	if not ok then
-		-- The player stays walletless rather than being handed an invented
-		-- balance. Surfacing it here is what stops that being silent.
 		warn(`failed to load currency for a player: {err}`)
 	end
 end
@@ -40,13 +40,36 @@ for _, player in Players:GetPlayers() do
 	onPlayerAdded(player)
 end
 
-Players.PlayerRemoving:Connect(function(player: Player)
-	currency:unloadPlayer(player.UserId)
+local wanderService = WanderService.new({
+	store = WanderAdapter.new("PlayerWander"),
+	wait = task.wait,
+	log = warn,
+})
+
+local getWanderEnter = Instance.new("RemoteFunction")
+getWanderEnter.Name = "WanderEnter"
+getWanderEnter.Parent = ReplicatedStorage
+
+getWanderEnter.OnServerInvoke = function(player: Player)
+	return wanderService:startWander(player.UserId, { "ball": WanderPoint("ball") })
+end
+
+local getWanderLeave = Instance.new("RemoteFunction")
+getWanderLeave.Name = "WanderLeave"
+getWanderLeave.Parent = ReplicatedStorage
+
+getWanderLeave.OnServerInvoke = function(player: Player)
+	return wanderService:departWander(player.UserId, { "ball": WanderPoint("ball") })
+end
+
+Players.PlayerAdded:Connect(function(player: Player)
+	warn(`player entered: {player.UserId}`)
 end)
 
--- PlayerRemoving is not guaranteed to fire on shutdown. Without this flush,
--- every online player loses the session's balance changes on every deploy.
--- Roblox holds the server open until this callback returns.
+Players.PlayerRemoving:Connect(function(player: Player)
+	warn(`player leaving: {player.UserId}`)
+end)
+
 game:BindToClose(function()
 	currency:unloadAll()
 end)

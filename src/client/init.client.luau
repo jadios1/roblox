@@ -6,6 +6,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local getBalance = ReplicatedStorage:WaitForChild("GetBalance") :: RemoteFunction
+local getWanderEnter = ReplicatedStorage:WaitForChild("WanderEnter") :: RemoteFunction
+local getWanderLeave = ReplicatedStorage:WaitForChild("WanderLeave") :: RemoteFunction
 
 local balance = getBalance:InvokeServer() :: number?
-print(`[rob] Current balance: {balance ~= nil and balance or "not loaded yet"}`)
+local entered = getWanderEnter:InvokeServer() :: (boolean, string?)
+local left = getWanderLeave:InvokeServer() :: (boolean, string?)
+
+print(`[rob] Balance: {balance ~= nil and balance or "not loaded yet"}`)
+print(`[rob] WanderEnter: {entered}`)
+print(`[rob] WanderLeave: {left}`)

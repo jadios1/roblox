@@ -19,8 +19,6 @@ local DataStoreService = game:GetService("DataStoreService")
 
 local CurrencyService = require("../Services/CurrencyService")
 
-local DataStoreAdapter = {}
-
 function DataStoreAdapter.new(storeName: string): CurrencyService.StoreLike
 	local store = DataStoreService:GetDataStore(storeName)
 	local self = {}

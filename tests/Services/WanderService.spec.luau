@@ -1,0 +1,74 @@
+--!strict
+local tiniest_for_lune = require("@tiniest/tiniest_for_lune")
+
+local WanderService = require("@server/Services/WanderService")
+
+type Tiniest = typeof(tiniest_for_lune.configure({}))
+
+local describe = t.describe
+local test = t.test
+local expect = t.expect
+
+describe("WanderService.new", function()
+	test("rejects a misconfigured starting balance at construction", function()
+		local ok = pcall(function()
+			return WanderService.new({ startingBalance = -1 })
+		end)
+		expect(ok).is(false)
+	end)
+
+	test("rejects a non-positive starting balance", function()
+		local ok = pcall(function()
+			return WanderService.new({ startingBalance = 0 })
+		end)
+		expect(ok).is(false)
+	end)
+
+	test("rejects a non-integer starting balance", function()
+		local ok = pcall(function()
+			return WanderService.new({ startingBalance = 0.5 })
+		end)
+		expect(ok).is(false)
+	end)
+end)
+
+describe("WanderService.startWander", function()
+	test("stores points for the given user", function()
+		local service = WanderService.new()
+		local ok, err = service:startWander(123, { "ball": WanderPoint("ball") })
+		expect(ok).is(true)
+		expect(service:wanderPoints["player/123"]).is({ "ball": WanderPoint("ball") })}
+	end)
+end)
+
+describe("WanderService.departWander", function()
+	test("removes points for the given user", function()
+		local service = WanderService.new()
+		local ok, err = service:startWander(123, { "ball": WanderPoint("ball") })
+		expect(ok).is(true)
+		local ok, err = service:departWander(123, { "ball": WanderPoint("ball") })
+		expect(ok).is(true)
+		expect(service:wanderPoints["player/123"]).is({})
+	end)
+
+	test("returns false when no points exist", function()
+		local service = WanderService.new()
+		local ok, err = service:departWander(123, { "ball": WanderPoint("ball") })
+		expect(ok).is(false)
+		expect(err).is("no points to depart from")
+	end)
+
+	test("returns false when wrong player ID", function()
+		local service = WanderService.new()
+		local ok, err = service:departWander(456, { "ball": WanderPoint("ball") })
+		expect(ok).is(false)
+		expect(err).is("no points to depart from")
+	end)
+end)
+
+describe("WanderService.getBalance", function()
+	test("returns the starting balance", function()
+		local service = WanderService.new({ startingBalance = 50 })
+		expect(service:getBalance(123)).is(50)
+	end)
+end)
