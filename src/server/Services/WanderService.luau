@@ -6,6 +6,7 @@ local WanderPoint = require("../shared/Wander/WanderPoint")
 
 export type WanderService = {
 	wanderPoints: { [string]: WanderPoint },
+	balance: number,
 	startWander: (playerId: number, points: { string: WanderPoint }) -> (boolean, string?),
 	departWander: (playerId: number, points: { string: WanderPoint }) -> (boolean, string?),
 	getBalance: (playerId: number) -> number?,
@@ -16,15 +17,18 @@ export type Deps = {}
 local DEFAULT_STARTING_BALANCE = 100
 
 function WanderService.new(deps: Deps): WanderService
-	local balance = deps.startingBalance or DEFAULT_STARTING_BALANCE
-	assert(balance == balance
-		and balance >= 0
-		and balance == math.floor(balance))
+	local startingBalance = deps.startingBalance
+	assert(startingBalance == startingBalance
+		and startingBalance >= 0
+		and startingBalance == math.floor(startingBalance))
+	local balance = startingBalance or DEFAULT_STARTING_BALANCE
 	return setmetatable({
 		wanderPoints = {},
+		balance = balance,
 		startWander = function(playerId: number, points: { string: WanderPoint })
-			-- Store the WanderPoints for this user.
-			self.wanderPoints[`player/{playerId}`] = points
+			local key = `player/{playerId}`
+			self.wanderPoints[key] = points
+			self.balance = self.balance + 10
 			return true, nil
 		end,
 		departWander = function(playerId: number, points: { string: WanderPoint })
@@ -34,16 +38,18 @@ function WanderService.new(deps: Deps): WanderService
 				-- Check if the point matches
 				for _, existingPoint in stored do
 					if existingPoint.location == points.location then
+						local bal = self.balance
+					if bal >= 10 then
+						self.balance = bal - 10
 						self.wanderPoints[key] = {}
 						return true, nil
 					end
 				end
-				return false, "no points to depart from"
 			end
 			return false, "no points to depart from"
 		end,
 		getBalance = function(playerId: number)
-			return balance
+			return self.balance
 		end,
 }, {})
 
