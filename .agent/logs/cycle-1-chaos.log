@@ -1,0 +1,22 @@
+# Chaos Ideas
+
+## Idea 1
+Name: **Balance Flip Glitch**
+Description: Periodic "glitch events" that randomly flip player balances (positive becomes negative, negative becomes positive) for 30 seconds, then auto-correct. Visual glitch effects show numbers cascading in chaos.
+Player interaction: Players see their UI flash red as balance reverses, creating panic and chaos. Some might try to exploit by withdrawing during negative balance.
+Why it could be fun: Creates emergent chaos where players react unpredictably - some panic withdraw, some try to exploit, some laugh. Pure temporary insanity.
+Implementation scope: Add a global timer hook, inject a `flipBalance()` function into Wallet, create a glitch UI overlay. Build on existing balance system, just add temporary mutation.
+
+## Idea 2
+Name: **The Leech Aura**
+Description: When a player withdraws more than their current balance in 30 seconds, they trigger a "leech aura" that slowly drains 1% of other players' balances in their vicinity. Aura lasts 10 seconds, visual particle effect shows green siphoning lines.
+Player interaction: Players avoid withdrawing quickly, or strategically trigger leeches on opponents. Creates social paranoia and counterplay.
+Why it could be fun: Introduces player-vs-player tension without direct combat. A withdraw can accidentally become a weapon. Chaos from unintended consequences.
+Implementation scope: Add `canWithdraw()` check, inject aura effect on successful large withdrawal, spawn temporary particle service. Uses existing withdrawal logic, just adds side effects.
+
+## Idea 3
+Name: **Chaotic Multiplier Mines**
+Description: Each deposit has a 1% hidden chance to trigger a "multiplier mine" that either doubles the deposit (good) or quadruples it but steals 2x from the player's other deposits (bad). Visual mine icon appears on deposit confirmation.
+Player interaction: Players decide whether to risk deposits for chaos. Creates tension between greed and caution. Some might farm small deposits to trigger the good outcome.
+Why it could be fun: Every transaction has hidden stakes. Creates emergent stories like "the player who risked it all and lost everything." Pure gambling chaos.
+Implementation scope: Add `triggerMine()` function to deposit flow, create mine UI overlay, inject into deposit success path. Builds on existing deposit system, just adds random side effect.

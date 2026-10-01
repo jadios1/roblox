@@ -1,0 +1,37 @@
+# Chaos Ideas
+
+## Idea 1
+Name:
+Random Balance Mutations
+Description:
+Every 30 seconds, all player balances get multiplied by a random factor (0.5x to 2x)
+Player interaction:
+Players must watch the clock and move currency before it decays or multiply unexpectedly
+Why it could be fun:
+Creates hilarious chaos when someone's carefully hoarded fortune vanishes overnight
+Implementation scope:
+Add a timer in CurrencyService that broadcasts to all players and updates their wallet balance
+
+## Idea 2
+Name:
+Time-Decay Currency
+Description:
+Currency decays 1% every 5 minutes if not spent or moved
+Player interaction:
+Players must actively use or transfer their currency to prevent it from disappearing
+Why it could be fun:
+Forces active gameplay and creates urgency around resource management
+Implementation scope:
+Add decay timer to CurrencyService that checks wallet activity timestamp and applies decay
+
+## Idea 3
+Name:
+Stealable Balances
+Description:
+Players can steal up to 10% of another player's balance with 25% success chance
+Player interaction:
+Players can attempt to steal from each other, adding risk/reward social dynamics
+Why it could be fun:
+Creates emergent social chaos where players might team up or become enemies
+Implementation scope:
+Add steal() method to CurrencyService that checks balance and applies random success/failure

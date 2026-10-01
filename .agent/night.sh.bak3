@@ -1,0 +1,608 @@
+#!/usr/bin/env bash
+
+set -u
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT" || exit 1
+
+MAIN_MODEL="unsloth/Qwen3.5-9B-GGUF:Q4_K_M"
+CHAOS_MODEL="unsloth/Qwen3.5-9B-GGUF:Q4_K_M"
+
+MAIN_CTX=16384
+CHAOS_CTX=8192
+
+CHAOS_MAX=180
+MAIN_MAX=2400
+REVIEW_MAX=600
+
+CHAOS_STALL=120
+MAIN_STALL=420
+REVIEW_STALL=300
+
+mkdir -p .agent/logs .agent/prompts
+
+# Keep local agent state out of Git.
+grep -qxF '.agent/' .git/info/exclude 2>/dev/null || echo '.agent/' >> .git/info/exclude
+
+# Pi settings: thinking off + sane compaction for 16k context.
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+p = Path.home() / ".pi/agent/settings.json"
+p.parent.mkdir(parents=True, exist_ok=True)
+
+if p.exists():
+    try:
+        data = json.loads(p.read_text())
+    except Exception:
+        data = {}
+else:
+    data = {}
+
+data["defaultThinkingLevel"] = "off"
+
+comp = data.get("compaction", {})
+if not isinstance(comp, dict):
+    comp = {}
+
+comp["enabled"] = True
+comp["reserveTokens"] = 4096
+comp["keepRecentTokens"] = 6000
+
+data["compaction"] = comp
+
+p.write_text(json.dumps(data, indent=2) + "\n")
+PY
+
+# -------------------------------------------------------------------
+# Prompts
+# -------------------------------------------------------------------
+
+cat > .agent/prompts/chaos.txt <<'EOF'
+You are the CHAOS IDEA AGENT for an existing Roblox/Luau game.
+
+DO NOT modify game source code.
+DO NOT modify AGENTS.md.
+Your only job is to generate gameplay ideas.
+
+Work autonomously. Do not ask questions.
+
+Briefly inspect:
+- AGENTS.md
+- .agent/STATE.md
+- .agent/HISTORY.md
+- recent git history
+- the existing source structure
+
+Then generate exactly 3 small gameplay ideas.
+
+Requirements:
+- genuinely interactive for players
+- slightly weird, surprising, or chaotic
+- implementable in roughly 30-60 minutes
+- builds on systems that already exist
+- does not require rebuilding the game
+- avoid boring refactors
+- avoid giant systems
+- avoid ideas that require external services
+
+Overwrite:
+
+.agent/IDEAS.md
+
+Use:
+
+# Chaos Ideas
+
+## Idea 1
+Name:
+Description:
+Player interaction:
+Why it could be fun:
+Implementation scope:
+
+## Idea 2
+...
+
+## Idea 3
+...
+
+Do not implement anything.
+Do not modify src or tests.
+Finish after writing IDEAS.md.
+EOF
+
+cat > .agent/prompts/main.txt <<'EOF'
+You are the MAIN AUTONOMOUS ROBLOX/LUAU DEVELOPER.
+
+You have approximately 40 minutes.
+
+DO NOT ASK QUESTIONS.
+DO NOT WAIT FOR INSTRUCTIONS.
+WORK AUTONOMOUSLY.
+
+Your job is to take ONE idea from .agent/IDEAS.md and turn it into a small, working gameplay feature.
+
+First inspect:
+
+git status --short
+git log --oneline -5
+
+Read:
+
+AGENTS.md
+.agent/IDEAS.md
+.agent/STATE.md
+.agent/HISTORY.md
+
+Then inspect only the source files relevant to the chosen idea.
+
+Do not read the entire repository unnecessarily.
+For large files, use grep and targeted reads/chunks.
+
+Choose ONE idea.
+If .agent/IDEAS.md is missing, empty, or contains unusable ideas, invent ONE small gameplay improvement yourself and continue.
+
+Implement it.
+
+Requirements:
+- preserve the existing architecture
+- use existing systems
+- server remains authoritative
+- do not create fake Roblox APIs
+- do not create duplicate player/currency systems
+- do not rewrite unrelated code
+- do not modify AGENTS.md
+- do not create unrelated files
+- do not install missing tools
+
+Do not spend the session writing a plan.
+Spend it implementing, testing, and fixing the feature.
+
+Use:
+read
+grep
+find
+ls
+write
+edit
+bash
+
+After implementation:
+- inspect every changed file
+- run relevant tests/checks that already exist
+- run git diff --check
+- run git status --short
+- run git diff --stat
+- inspect your own diff and fix obvious mistakes
+
+Update:
+
+.agent/CURRENT_TASK.md
+
+with:
+- selected idea
+- implementation summary
+- files changed
+
+Update:
+
+.agent/STATE.md
+
+with:
+- what was implemented
+- checks actually run
+- anything unfinished
+
+DO NOT COMMIT.
+The outer night runner handles Git commits.
+
+Do not start a second feature.
+EOF
+
+cat > .agent/prompts/reviewer.txt <<'EOF'
+You are the REVIEWER for an autonomous Roblox/Luau development cycle.
+
+You have approximately 10 minutes.
+
+DO NOT ASK QUESTIONS.
+
+The previous agent attempted to implement one gameplay feature.
+
+Inspect:
+
+git status --short
+git diff --stat
+git diff
+
+Read:
+AGENTS.md
+.agent/CURRENT_TASK.md
+
+Then inspect the changed files and relevant surrounding code.
+
+Look specifically for:
+- syntax errors
+- undefined variables
+- wrong require paths
+- invalid Luau
+- invalid Roblox APIs
+- broken server/client boundaries
+- incorrect player state
+- duplicated systems
+- architecture violations
+- obvious runtime errors
+- unrelated changes
+- tests that do not match the implementation
+
+Run relevant tests/checks that already exist.
+Do not install missing tools.
+
+If you find an obvious bug, FIX IT YOURSELF.
+
+Do not add a new feature.
+Do not redesign the project.
+Do not modify AGENTS.md.
+Do not commit.
+
+At the end write .agent/REVIEW.md.
+
+It MUST begin with exactly one of:
+
+STATUS: PASS
+
+or
+
+STATUS: FAIL
+
+Then explain briefly what you checked and what remains uncertain.
+
+Before finishing:
+git diff --check
+git status --short
+git diff --stat
+EOF
+
+# -------------------------------------------------------------------
+# Dedicated agent runner.
+# Every Pi gets its own llama server.
+# -------------------------------------------------------------------
+
+cat > .agent/run-agent.sh <<'EOF'
+#!/usr/bin/env bash
+
+set -u
+
+ROLE="$1"
+MODEL="$2"
+CTX="$3"
+PORT="$4"
+TOOLS="$5"
+PROMPT_FILE="$6"
+SERVER_LOG="$7"
+PID_FILE="$8"
+
+echo "$$ $(ps -o pgid= -p $$ | tr -d ' ')" > "$PID_FILE"
+
+LLAMA_PID=""
+
+cleanup() {
+    if [ -n "${LLAMA_PID:-}" ]; then
+        kill -TERM "$LLAMA_PID" 2>/dev/null || true
+        sleep 1
+        kill -KILL "$LLAMA_PID" 2>/dev/null || true
+    fi
+}
+
+trap cleanup EXIT INT TERM
+
+unset LLAMA_API_KEY
+unset OPENAI_API_KEY
+
+llama serve \
+    -hf "$MODEL" \
+    --jinja \
+    --reasoning off \
+    --ctx-size "$CTX" \
+    --fit on \
+    --flash-attn on \
+    --host 127.0.0.1 \
+    --port "$PORT" \
+    > "$SERVER_LOG" 2>&1 &
+
+LLAMA_PID=$!
+
+READY=0
+
+for _ in $(seq 1 120); do
+    if curl -fsS "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
+        READY=1
+        break
+    fi
+
+    if ! kill -0 "$LLAMA_PID" 2>/dev/null; then
+        echo "ERROR: llama server died during startup."
+        exit 70
+    fi
+
+    sleep 1
+done
+
+if [ "$READY" -ne 1 ]; then
+    echo "ERROR: llama server did not become ready."
+    exit 71
+fi
+
+export LLAMA_BASE_URL="http://127.0.0.1:$PORT/v1"
+
+PROMPT="$(cat "$PROMPT_FILE")"
+
+pi --no-session -p \
+    --provider llama-cpp \
+    --model "$MODEL" \
+    --thinking off \
+    --tools "$TOOLS" \
+    "$PROMPT"
+
+exit $?
+EOF
+
+chmod +x .agent/night.sh .agent/run-agent.sh
+
+touch .agent/HISTORY.md
+
+# -------------------------------------------------------------------
+# Refuse to start if the real project already has uncommitted work.
+# .agent is intentionally ignored.
+# -------------------------------------------------------------------
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "ERROR: tracked Git changes already exist."
+    echo "Commit/stash them before starting the night runner."
+    git status --short
+    exit 1
+fi
+
+if git status --porcelain | grep -vE '^\?\? \.agent/' | grep -q .; then
+    echo "ERROR: untracked files outside .agent exist."
+    git status --short
+    exit 1
+fi
+
+LAST_CYCLE="$(
+    grep -E '^## Cycle [0-9]+' .agent/HISTORY.md 2>/dev/null |
+    tail -1 |
+    awk '{print $3}'
+)"
+
+if [[ "$LAST_CYCLE" =~ ^[0-9]+$ ]]; then
+    CYCLE=$((LAST_CYCLE + 1))
+else
+    CYCLE=1
+fi
+
+run_agent() {
+    local ROLE="$1"
+    local MODEL="$2"
+    local CTX="$3"
+    local PORT="$4"
+    local MAX_SECONDS="$5"
+    local STALL_SECONDS="$6"
+    local TOOLS="$7"
+    local PROMPT_FILE="$8"
+
+    local AGENT_LOG=".agent/logs/cycle-${CYCLE}-${ROLE}.log"
+    local SERVER_LOG=".agent/logs/cycle-${CYCLE}-${ROLE}-llama.log"
+    local PID_FILE=".agent/logs/cycle-${CYCLE}-${ROLE}.pid"
+
+    : > "$AGENT_LOG"
+    : > "$SERVER_LOG"
+    rm -f "$PID_FILE"
+
+    echo
+    echo "========================================"
+    echo "$ROLE"
+    echo "Cycle: $CYCLE"
+    echo "Model: $MODEL"
+    echo "========================================"
+
+    setsid .agent/run-agent.sh \
+        "$ROLE" \
+        "$MODEL" \
+        "$CTX" \
+        "$PORT" \
+        "$TOOLS" \
+        "$PROMPT_FILE" \
+        "$SERVER_LOG" \
+        "$PID_FILE" \
+        > "$AGENT_LOG" 2>&1 &
+
+    local LAUNCHER_PID=$!
+    local WAIT=0
+
+    while [ ! -f "$PID_FILE" ] && [ "$WAIT" -lt 30 ]; do
+        sleep 1
+        WAIT=$((WAIT + 1))
+    done
+
+    if [ ! -f "$PID_FILE" ]; then
+        echo "ERROR: runner did not create PID file."
+        kill "$LAUNCHER_PID" 2>/dev/null || true
+        return 70
+    fi
+
+    local AGENT_PID
+    local PGID
+
+    read -r AGENT_PID PGID < "$PID_FILE"
+
+    local START
+    local LAST_CHANGE
+    local LAST_SIZE
+
+    START=$(date +%s)
+    LAST_CHANGE="$START"
+    LAST_SIZE=$(stat -c %s "$AGENT_LOG" 2>/dev/null || echo 0)
+
+    while kill -0 "$AGENT_PID" 2>/dev/null; do
+        sleep 10
+
+        local NOW
+        local SIZE
+
+        NOW=$(date +%s)
+        SIZE=$(stat -c %s "$AGENT_LOG" 2>/dev/null || echo 0)
+
+        if [ "$SIZE" -gt "$LAST_SIZE" ]; then
+            LAST_CHANGE="$NOW"
+            LAST_SIZE="$SIZE"
+        fi
+
+        if [ $((NOW - START)) -ge "$MAX_SECONDS" ]; then
+            echo "WATCHDOG: $ROLE hit hard time limit."
+            kill -TERM -- "-$PGID" 2>/dev/null || true
+            sleep 5
+            kill -KILL -- "-$PGID" 2>/dev/null || true
+            wait "$LAUNCHER_PID" 2>/dev/null || true
+            return 124
+        fi
+
+        if [ $((NOW - LAST_CHANGE)) -ge "$STALL_SECONDS" ]; then
+            echo "WATCHDOG: $ROLE produced no new output for ${STALL_SECONDS}s."
+            kill -TERM -- "-$PGID" 2>/dev/null || true
+            sleep 5
+            kill -KILL -- "-$PGID" 2>/dev/null || true
+            wait "$LAUNCHER_PID" 2>/dev/null || true
+            return 125
+        fi
+    done
+
+    wait "$LAUNCHER_PID" 2>/dev/null || true
+
+    local RC=0
+    if [ -s "$AGENT_LOG" ]; then
+        tail -25 "$AGENT_LOG"
+    fi
+
+    echo
+    echo "$ROLE finished."
+    echo "Agent log:  $AGENT_LOG"
+    echo "Server log: $SERVER_LOG"
+
+    return "$RC"
+}
+
+run_cycle() {
+    BASE_COMMIT="$(git rev-parse HEAD)"
+
+    echo
+    echo "########################################"
+    echo "NIGHT CYCLE $CYCLE"
+    echo "$(date)"
+    echo "########################################"
+
+    # Fresh cycle state.
+    : > .agent/IDEAS.md
+    printf '# Current Task\n\nNot selected yet.\n' > .agent/CURRENT_TASK.md
+    printf '# Review\n\nSTATUS: NOT COMPLETED\n' > .agent/REVIEW.md
+
+    CHAOS_RC=0
+    MAIN_RC=0
+    REVIEW_RC=0
+
+    # Chaos has only inspection + write access.
+    run_agent \
+        "chaos" \
+        "$CHAOS_MODEL" \
+        "$CHAOS_CTX" \
+        18081 \
+        "$CHAOS_MAX" \
+        "$CHAOS_STALL" \
+        "read,grep,find,ls,write" \
+        ".agent/prompts/chaos.txt" || CHAOS_RC=$?
+
+    # Main gets the full development toolset.
+    run_agent \
+        "main" \
+        "$MAIN_MODEL" \
+        "$MAIN_CTX" \
+        18082 \
+        "$MAIN_MAX" \
+        "$MAIN_STALL" \
+        "read,grep,find,ls,write,edit,bash" \
+        ".agent/prompts/main.txt" || MAIN_RC=$?
+
+    # Reviewer gets another isolated model server.
+    run_agent \
+        "review" \
+        "$MAIN_MODEL" \
+        "$MAIN_CTX" \
+        18083 \
+        "$REVIEW_MAX" \
+        "$REVIEW_STALL" \
+        "read,grep,find,ls,write,edit,bash" \
+        ".agent/prompts/reviewer.txt" || REVIEW_RC=$?
+
+    git diff --check || true
+
+    local REVIEW_STATUS="FAIL"
+    if grep -q '^STATUS: PASS' .agent/REVIEW.md 2>/dev/null; then
+        REVIEW_STATUS="PASS"
+    fi
+
+    if [ "$REVIEW_STATUS" = "PASS" ]; then
+        echo
+        echo "REVIEW PASS — creating Git checkpoint."
+
+        git add -u
+        git add src tests 2>/dev/null || true
+
+        if ! git diff --cached --quiet; then
+            git commit -m "night: cycle $CYCLE"
+        else
+            echo "Nothing changed."
+        fi
+    else
+        echo
+        echo "REVIEW FAIL — reverting this cycle."
+
+        git reset --hard "$BASE_COMMIT"
+        git clean -fd -- src tests
+    fi
+
+    {
+        echo
+        echo "## Cycle $CYCLE — $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "- Chaos exit: $CHAOS_RC"
+        echo "- Main exit: $MAIN_RC"
+        echo "- Reviewer exit: $REVIEW_RC"
+        echo "- Review: $REVIEW_STATUS"
+        if [ -f .agent/CURRENT_TASK.md ]; then
+            echo "- Task:"
+            sed -n '1,12p' .agent/CURRENT_TASK.md
+        fi
+    } >> .agent/HISTORY.md
+
+    echo
+    echo "Final Git state:"
+    git status --short
+
+    echo
+    echo "Cycle $CYCLE complete."
+}
+
+if [ "${1:-}" = "--once" ]; then
+    run_cycle
+    exit $?
+fi
+
+while true; do
+    run_cycle
+
+    CYCLE=$((CYCLE + 1))
+
+    echo
+    echo "Starting next cycle in 10 seconds..."
+    sleep 10
+done

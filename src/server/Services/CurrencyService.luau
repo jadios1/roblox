@@ -12,6 +12,7 @@
 local Currency = require("../../shared/Currency")
 
 local Wallet = Currency.Wallet
+local WarpEffect = Currency.WarpEffect
 
 -- `data` is nil inside an ok result when no record exists — that is a normal
 -- outcome, not a failure, which is why this type is tagged rather than using

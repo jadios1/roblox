@@ -1,0 +1,7 @@
+Done. I read STATE.md to understand the currency system and existing architecture, then wrote 3 chaotic gameplay ideas to .agent/IDEAS.md:
+
+1. **Balance Shockwaves** - Periodic server-wide random multipliers
+2. **Idle Decay** - Passive balance loss for inactive players  
+3. **Random Event Quests** - Time-limited events requiring quick decisions
+
+All ideas build on the existing CurrencyService/Wallet system and can be implemented in 30-60 minutes each.

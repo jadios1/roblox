@@ -68,6 +68,11 @@ function Wallet.canWithdraw(self: Wallet, amount: number): boolean
 	return amount <= self._balance
 end
 
+-- Return true if the wallet has a zero balance.
+function Wallet.isEmpty(self: Wallet): boolean
+	return self._balance == 0
+end
+
 function Wallet.serialize(self: Wallet): WalletData
 	return { balance = self._balance }
 end

@@ -1,0 +1,37 @@
+# Chaos Ideas
+
+## Idea 1
+Name:
+Random Tax Event
+Description:
+Periodically, all players lose a random percentage of their balance (5-50%)
+Player interaction:
+Public notification with dramatic sound and temporary UI flash
+Why it could be fun:
+Creates tension and forces players to hoard currency strategically
+Implementation scope:
+Add timer in CurrencyService, apply random deduction, broadcast to all players
+
+## Idea 2
+Name:
+Balance Lottery
+Description:
+Randomly, a random player receives 1-100 currency units as a "mystery gift"
+Player interaction:
+Pop-up notification "You found 42 coins! Click to claim"
+Why it could be fun:
+Adds unpredictability and small dopamine hits for casual players
+Implementation scope:
+Random interval trigger in CurrencyService, generate random amount, call deposit on random player
+
+## Idea 3
+Name:
+Double Spending Glitch
+Description:
+Randomly, when a player withdraws, their balance doesn't decrease (they "got away with it")
+Player interaction:
+Temporary debug-style message "Balance unchanged" appears briefly
+Why it could be fun:
+Creates a sense of glitchy RNG chaos, players will try repeatedly to trigger it
+Implementation scope:
+Random chance modifier in CurrencyService.withdraw(), occasionally skip the subtraction step

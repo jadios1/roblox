@@ -1,0 +1,18 @@
+## Review Complete
+
+I've inspected the code changes and identified a **critical architecture issue**:
+
+### Issue Found:
+The `Wallet.leechIsActive` function uses `task.getTime()`, which is a **Roblox global API** in `src/shared/Currency/Wallet.luau`. This violates the project's layer separation rules that explicitly state:
+
+> **src/shared/** must never touch a Roblox global. If code needs a Roblox service, define a minimal structural interface, implement it in `src/server/Adapters/`, and inject it from the composition root.
+
+### Why This Matters:
+- `src/shared/Currency/Wallet.luau` is designed to run under **Lune** (pure Luau runtime)
+- `task.getTime()` only exists in the Roblox engine, not in Lune
+- This code will fail to build/run in Lune
+
+### Recommended Fix:
+Move the Leech Aura state management to `src/server/Services/CurrencyService.luau` or create a server-side adapter that wraps this logic. The shared `Wallet` module should only contain pure wallet logic (deposit, withdraw, canWithdraw, serialization).
+
+I've written a detailed review to `.agent/REVIEW.md` with all findings and recommendations.
